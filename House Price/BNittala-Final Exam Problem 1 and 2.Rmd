@@ -1,0 +1,490 @@
+---
+title: "Computational Mathematics DATA 605"
+author: "Bharani Nittala"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+  
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, results = FALSE, fig.show = "hide", message = FALSE)
+```
+
+## Problem Statement
+
+$Problem 1.$
+Using R, generate a random variable X that has 10,000 random uniform numbers from 1 to N, where N can be any number of your choosing greater than or equal to 6.  Then generate a random variable Y that has 10,000 random normal numbers with a mean of μ=σ=(N+1)/2.
+
+Probability.   Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the median of the X variable, and the small letter "y" is estimated as the 1st quartile of the Y variable.  Interpret the meaning of all probabilities.
+5 points           a.   P(X>x | X>y)		b.  P(X>x, Y>y)		c.  P(X<x | X>y)				
+
+5 points.   Investigate whether P(X>x and Y>y)=P(X>x)P(Y>y) by building a table and evaluating the marginal and joint probabilities.
+
+5 points.  Check to see if independence holds by using Fisher’s Exact Test and the Chi Square Test.  What is the difference between the two? Which is most appropriate?
+
+
+
+### Generate the random variables X and Y
+
+```{r , message=FALSE}
+set.seed(5202021)
+N <- 10
+
+# mu = sigma = (N + 1)/2
+mu <- (N+1) / 2
+sigma <- (N+1) / 2
+
+# Generate the random variable X
+# Random Uniform Numbers - runif 
+X <- runif(10000, min = 1, max = N)
+
+# Generate the random variable Y
+# Random Normal Numbers - rnorm
+Y <- rnorm(10000, mean = mu, sd = sigma)
+```
+
+
+### Exploring the data
+
+```{r, results="asis" }
+summary(X)
+```
+
+
+```{r , results="asis"}
+summary(Y)
+```
+
+## Part I
+### a) P(X>x | X>y)
+
+P(x|y)=P(x∩y)P(y)
+
+```{r }
+x <- median(X)
+y <- quantile(Y,0.25,names=FALSE)
+```
+
+```{r, results="asis" }
+# P(X > x & X > y)
+combined <- length(X[(X > x) & (X > y)])/length(X)
+
+# P(X > y)
+cond_1 <- length(X[X > y])/length(X)
+
+# P(X > x | X > y)
+probability <- combined / cond_1
+probability
+```
+
+
+### b) P(X>x, Y>y)
+
+P(X > x, Y > y) = P(X > x) * P(Y > y)
+
+```{r, results="asis" }
+# P(X > x)
+cond_x <- length(X[X > x])/length(X)
+
+# P(Y > y)
+cond_y <- length(Y[Y > y])/length(Y)
+
+# P(X > x , Y > y)
+probability <- cond_x * cond_y
+probability
+```
+
+
+### c) P(X<x | X>y)
+
+P(x|y)=P(x∩y)P(y)
+
+```{r, results="asis" }
+# P(X > x & X > y)
+combined <- length(X[(X < x) & (X > y)])/length(X)
+
+# P(X > y)
+cond_2 <- length(X[X > y])/length(X)
+
+# P(X > x | X > y)
+probability <- combined/ cond_2
+probability
+```
+
+## Part II
+Investigate P(X>x and Y>y) = P(X>x)P(Y>y)
+
+
+```{r, results="asis" }
+library(data.table)
+
+# Joint probability
+Prob1 <- (X > x)
+Prob_X_x <- (length(Prob1[Prob1 == TRUE]))/(length(Prob1))
+
+Prob2 <- (Y > y)
+Prob_Y_y <- (length(Prob2[Prob2 == TRUE]))/(length(Prob2))
+
+# Marginal probability
+Final = data.table(
+  ID = c("(X>x)","(Y>y)","(X>x)*(Y>y)","(X>x and Y>y)"),
+  X_x = c(Prob_X_x, Prob_Y_y, Prob_X_x*Prob_Y_y, Prob_X_x*Prob_Y_y),
+  Y_y = c(Prob_Y_y, Prob_X_x, Prob_X_x*Prob_Y_y, Prob_X_x*Prob_Y_y)
+)
+
+Final
+```
+
+
+## Part III 
+
+Fisher’s Exact Test is a statistical test used to determine the level of association, or whether there is a non-random association, between two categorical variables.
+
+The Chi Square Test, by contrast, is used to quantify the magnitude of discrepancy between expected and actual results and is often used in hypothesis testing.
+
+To compare the output of each test, we initialize our contingency table, which is just our p-table joint probability values multiplied by n (10,000), and use this table as input to the built in fisher.test() and chisq.test() functions. Each function outputs a p-value as well as a number of other variables for consideration:
+
+```{r, results="asis" }
+
+c_table <- matrix(c(sum(X>x & Y>y), sum(X>x & Y<=y), sum(X<=x & Y>y), sum(X<=x & Y<=y)), nrow = 2)
+colnames(c_table) <- c('X > x', 'X <= x' )
+rownames(c_table) <- c('Y > y', 'Y <= y')
+
+c_table
+```
+
+### Fisher Test
+```{r, results="asis" }
+
+fisher.test(c_table)
+
+```
+
+The Fisher’s  Test on the data of X and Y produces a p-value of 0.02823 which is within the significance level of 5%. The null hypothesis of independence, H0 is  rejected 
+
+
+### Chi Sqr Test
+```{r, results="asis" }
+
+chisq.test(c_table)
+
+```
+
+The Fisher’s  Test on the data of X and Y produces a p-value of 0.02824 which is within the significance level of 5%. The null hypothesis of independence, H0 is  rejected. Fisher’s Exact Test is used when there is a small sample set and the Chi Square Test is used when sample set is large. In this case, since we have enough data points both seem to have similar results. 
+
+
+$Problem 2.$
+
+You are to register for Kaggle.com (free) and compete in the House Prices: Advanced Regression Techniques competition.  https://www.kaggle.com/c/house-prices-advanced-regression-techniques .  I want you to do the following.
+
+## Part I
+
+5 points.  Descriptive and Inferential Statistics. Provide univariate descriptive statistics and appropriate plots for the training data set.  Provide a scatterplot matrix for at least two of the independent variables and the dependent variable. Derive a correlation matrix for any three quantitative variables in the dataset.  Test the hypotheses that the correlations between each pairwise set of variables is 0 and provide an 80% confidence interval. Discuss the meaning of your analysis.  Would you be worried about familywise error? Why or why not?
+
+### Import required libraries
+```{r}
+# Import libraries for this section
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pander)
+library(MASS)
+library(fastDummies)
+library(corrplot)
+library(tidyverse)
+library(matrixcalc)
+```
+
+### Import datasets
+```{r }
+
+# Import the training and test data 
+train_df <- read.csv("https://raw.githubusercontent.com/bharanimadhav/Data/main/House%20Price/train.csv", stringsAsFactors = FALSE)  
+test_df <- read.csv("https://raw.githubusercontent.com/bharanimadhav/Data/main/House%20Price//test.csv", stringsAsFactors = FALSE)
+
+```
+
+
+### Glance into the datasets
+```{r, results="asis"}
+glimpse(train_df)
+colnames(train_df)
+str(train_df)
+```
+
+There are 1,460 rows and 81 columns. It is a combination of integer and character variables.There are columns with many NAs which we will deal with in data cleaning phase. 
+
+### Getting dataset ready
+
+Data cleaning 
+```{r, results="asis"}
+na_col <- which(colSums(is.na(train_df)) > 0)
+sort(colSums(sapply(train_df[na_col], is.na)), decreasing = TRUE)
+
+```
+
+We can see that MiscFeature, PoolQC,Alley and Fence cannot be used from the dataset. There are only 1460 rows, hence these variables are missing more than 50 percent of their total data. We can further perform descriptive and inferential statistics to understand the dependent and independent variables
+
+```{r, results="asis"}
+train_df<-subset(train_df, select=-c(Id, MiscFeature,PoolQC,Alley,Fence))
+```
+
+We can then remove NAs
+```{r, results="asis"}
+  train_df %>% # Replace N/A's for numeric variables
+    mutate(BedroomAbvGr = replace_na(BedroomAbvGr, 0), BsmtFullBath = replace_na(BsmtFullBath, 
+        0), BsmtHalfBath = replace_na(BsmtHalfBath, 0), BsmtUnfSF = replace_na(BsmtUnfSF, 
+        0), EnclosedPorch = replace_na(EnclosedPorch, 0), Fireplaces = replace_na(Fireplaces, 
+        0), GarageArea = replace_na(GarageArea, 0), GarageCars = replace_na(GarageCars, 
+        0), HalfBath = replace_na(HalfBath, 0), KitchenAbvGr = replace_na(KitchenAbvGr, 
+        0), LotFrontage = replace_na(LotFrontage, 0), OpenPorchSF = replace_na(OpenPorchSF, 
+        0), PoolArea = replace_na(PoolArea, 0), ScreenPorch = replace_na(ScreenPorch, 
+        0), TotRmsAbvGrd = replace_na(TotRmsAbvGrd, 0), WoodDeckSF = replace_na(WoodDeckSF, 
+        0))
+
+```
+
+R is smart enough to identify factor variables if included in the regression models. So, I skipped creating dummy variables from character variables
+
+### Descriptive and Inferential Statistics
+```{r, results="asis"}
+# Basic Descriptive Statistics for int variables
+summary(train_df)
+```
+
+Looking at the mean and median values of each variable, as given by the `summary` function, we can choose few variables of interest such as `LotArea`, `TotalBsmtSF`, `GrLivArea`, `X1stFlrSF`, `BsmtFinSF1`, `MasVnrArea`, `OverallCond` and `SalePrice`
+
+
+```{r, fig.show="asis"}
+hist(train_df$LotArea, xlab = "Lot Area", main = "Histogram of Lot Area", col = "black")
+```  
+
+```{r,fig.show="asis"}
+hist(train_df$TotalBsmtSF, xlab = "Basement Area", main = "Histogram of Basement Area", col = "black")
+```  
+
+```{r,fig.show="asis"}
+hist(train_df$GrLivArea, xlab = "Above grade (ground) living area", main = "Histogram of Above grade (ground) living area", col = "black")
+```  
+
+```{r,fig.show="asis"}
+hist(train_df$SalePrice, xlab = "SalePrice", main = "Histogram of SalePrice", col = "black")
+```  
+
+Let's also understand correlation between variables to identify few other variables of interest. 
+
+```{r, results="asis"}
+train_df_char <- unlist(lapply(train_df, is.numeric))
+train_df_nums <-train_df[ , train_df_char]
+train_df_cor = cor(train_df_nums, method = "pearson", use = "complete.obs")
+corrplot(train_df_cor)
+```
+
+Additional variables identified are `OverallQual`, `GarageArea` and `X1stFlrSF`. Let's subset the dataset to the variables of interest alone.
+
+```{r}
+train_df_final <- subset(train_df, select=c(SalePrice, LotArea, TotalBsmtSF, GrLivArea, X1stFlrSF, BsmtFinSF1, MasVnrArea, OverallCond,OverallQual,GarageArea))
+```
+
+Replotting correlation matrix
+```{r, fig.show="asis"}
+corrplot(cor(train_df_final, method = "pearson", use = "complete.obs"),method = "square")
+```
+
+
+Now, let's try to understand the relationship between the variables (bivariate) using scatter plot. Before that, we can define the independent and dependent variables. From the summary table and business intuition, we can select 'SalesPrice' as dependent variable and remaining variables of interest as 'independent variables'
+
+```{r, fig.show="asis"}
+pairs(train_df_final, pch=19, lower.panel=NULL)
+```
+
+That's lot of variables, let's select 3 as instructed in the problem statement
+
+```{r, fig.show="asis"}
+train_df_scat <- subset(train_df_final, select=c(SalePrice, LotArea, OverallQual,GarageArea))
+pairs(train_df_scat, pch=19, lower.panel=NULL)
+```
+
+Relationship between SalePrice and OverallQual seems interesting, let's zoom into it further more
+
+```{r, fig.show="asis"}
+ggplot(train_df_final, aes(x = OverallQual, y = SalePrice)) + geom_point(aes(color = factor(OverallQual))) + 
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+It shows that the sale price goes up as the overall quality factor goes from 1 to 10. This makes business sense too. 
+$Regarding family-wise error:$ The familywise error rate (FWE or FWER) is the probability of a coming to at least one false conclusion in a series of hypothesis tests . In other words, it’s the probability of making at least one Type I Error. The term “familywise” error rate comes from family of tests, which is the technical definition for a series of tests on data. Let's find the confidence intervals for the pairwise set of variables. 
+
+
+```{r, results="asis"}
+# SalePrice vs LotArea
+SalePricevLotArea <- cor.test(train_df_final$SalePrice, train_df_final$LotArea, method="pearson", conf.level=0.8)
+SalePricevLotArea
+```
+
+```{r, results="asis"}
+# SalePrice vs OverallQual
+SalePricevOverallQual <- cor.test(train_df_final$SalePrice, train_df_final$OverallQual, method="pearson", conf.level=0.8)
+SalePricevOverallQual
+```
+
+```{r, results="asis"}
+# SalePrice vs GarageArea
+SalePricevGarageArea <- cor.test(train_df_final$SalePrice, train_df_final$GarageArea, method="pearson", conf.level=0.8)
+SalePricevGarageArea
+```
+
+
+I would not be worried about familywise error because of the significant p-values, high t-statistic, and the number of observations in the study.
+
+### Linear Algegra and Correlation
+
+Precision Matrix on variables of interest
+```{r, results="asis"}
+correlationmatrix = cor(train_df_scat)
+precisionmatrix = solve(correlationmatrix)
+precisionmatrix
+```
+
+Multiply Correlation by Precision Matrix
+```{r, results="asis"}
+round(correlationmatrix %*% precisionmatrix)
+
+```
+
+Multiply Precision by Correlation Matrix
+```{r, results="asis"}
+round(precisionmatrix %*% correlationmatrix)
+
+```
+
+
+LU Decomposition on the matrix
+```{r, results="asis"}
+lu_decomp = lu.decomposition(correlationmatrix)
+lu_decomp
+
+```
+
+```{r, results="asis"}
+L <- lu_decomp$L
+U <- lu_decomp$U
+
+print(L)
+print(U)
+
+```
+
+### Calculus-Based Probability & Statistics
+
+Select a variable in the Kaggle.com training dataset that is skewed to the right, shift it so that the minimum value is absolutely above zero if necessary
+
+```{r, results="asis"}
+min(train_df_final$GarageArea)
+
+```
+
+We already have the variable that fits to the need - GarageArea
+
+Then load the MASS package and run fitdistr to fit an exponential probability density function.Find the optimal value of lambda for this distribution, and then take 1000 samples from this exponential distribution using this value. Plot a histogram and compare it with a histogram of your original variable.
+
+```{r, results="asis"}
+exp_pdf = fitdistr(train_df_final$GarageArea, "exponential")
+lambda = exp_pdf$estimate
+optimal = rexp(1000, lambda)
+# Histogram of the samples
+hist(optimal)
+```
+
+Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).   Also generate a 95% confidence interval from the empirical data, assuming normality.  Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.
+
+```{r, results="asis"}
+cdf <- ecdf(optimal)
+plot(cdf)
+summary(cdf)
+quantiles <- quantile(cdf,c(.05,.95))
+quantiles
+```
+
+```{r, results="asis"}
+# 95th confidence interval 
+mu <- mean(optimal)
+sd <- sd(optimal)
+error <- qnorm(.975) * sd/sqrt(1000)
+lower_percentile <- mu - error
+upper_percentile <- mu + error
+```
+
+The 5%ile value is $455.714$ and 95th ile value is $515.343$ with a mean value of $485.528$
+
+###Modeling  
+Build some type of multiple regression  model and submit your model to the competition board.  Provide your complete model summary and results with analysis.  Report your Kaggle.com user name and score.
+
+```{r, results="asis"}
+lm <- lm(SalePrice ~ LotArea + TotalBsmtSF + GrLivArea + X1stFlrSF+ BsmtFinSF1 + MasVnrArea +OverallCond + GarageArea + OverallQual, data = train_df_final)
+summary(lm)
+```
+
+Iterating by removing insignificant variables and adding other variables from the main dataset
+
+```{r, results="asis"}
+lm <- lm(SalePrice ~ LotArea + TotalBsmtSF + GrLivArea + BsmtFinSF1 + MasVnrArea +OverallCond + GarageArea + OverallQual   , data = train_df)
+summary(lm)
+```
+
+Understanding the output 
+
+```{r, fig.show="asis"}
+#Histogram of residuals
+hist(resid(lm), breaks = 50, main = "Histogram of Residuals", xlab= "")
+
+#Residuals plot
+plot(resid(lm), fitted(lm), main = "Residuals Plot") 
+
+#Q-Q plot
+qqnorm(resid(lm))
+qqline(resid(lm))
+
+```
+
+Plots show that the conditions for the linear regression model are satisfied. 
+
+Understanding test dataset - 
+
+```{r, results="asis"}
+summary(subset(test_df,select = c(LotArea , TotalBsmtSF , GrLivArea , BsmtFinSF1 , MasVnrArea ,OverallCond , GarageArea , OverallQual )))
+```
+
+We can then treat NAs in the test dataset
+```{r, results="asis"}
+  test_df %>% # Replace N/A's for numeric variables
+    mutate(LotArea = replace_na(LotArea, 0), GrLivArea= replace_na(GrLivArea, 
+        0), TotalBsmtSF = replace_na(TotalBsmtSF, 0), BsmtFinSF1 = replace_na(BsmtFinSF1, 
+        0),  MasVnrArea = replace_na(MasVnrArea, 0), OverallCond = replace_na(OverallCond, 
+        0), GarageArea = replace_na(GarageArea, 0), OverallQual = replace_na(OverallQual, 
+        0))
+
+```
+
+```{r, results="asis"}
+na_col <- which(colSums(is.na(test_df)) > 0)
+sort(colSums(sapply(test_df[na_col], is.na)), decreasing = TRUE)
+
+```
+
+
+```{r, results="asis"}
+test_df_final <-subset(test_df ,select = c(LotArea , TotalBsmtSF , GrLivArea , BsmtFinSF1 , MasVnrArea ,OverallCond , GarageArea , OverallQual ))
+```
+
+Score the model on the test dataset
+
+```{r, results="asis"}
+test_pred <- predict(lm, test_df_final, type = "response")
+output = cbind(test_df$Id, test_pred)
+colnames(output)[1] <- 'Id'
+colnames(output)[2] <- 'SalePrice'
+write.csv(output, file="submission.csv", row.names=F, quote=FALSE)
+```
